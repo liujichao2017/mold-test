@@ -59,51 +59,6 @@ export default function BalanceVisualizerPage() {
   // 生成新的随机产品并计算布局
   const handleGenerateProducts = async (newProducts: Product[], moldMaterial: string) => {
     try {
-      // const newProducts = generateRandomProducts(productCount,undefined, identical);
-      // const newProducts=
-      // [
-      //   {
-      //     id: 0,
-      //     name: "产品0",
-      //     weight: 400,
-      //     dimensions: {
-      //       length: 100,
-      //       width: 100,
-      //       height: 50,
-      //     },
-      //   }, {
-      //     id: 1,
-      //     name: "产品1",
-      //     weight: 400,
-      //     dimensions: {
-      //       length: 100,
-      //       width: 100,
-      //       height: 50,
-      //     },
-      //   }, {
-      //     id: 2,
-      //     name: "产品2",
-      //     weight: 400,
-      //     dimensions: {
-      //       length: 100,
-      //       width: 100,
-      //       height: 50,
-      //     },
-      //   }, {
-      //     id: 3,
-      //     name: "产品3",
-      //     weight: 400,
-      //     dimensions: {
-      //       length: 100,
-      //       width: 100,
-      //       height: 50,
-      //     },
-      //   }
-      // ]
-
-      // console.log("newProducts:", newProducts);
-      // console.log("moldMaterial:", moldMaterial);
-      // 1. 将产品转换为 Rectangle2D 数组
       const rectangles: Rectangle2D[] = newProducts.map((product) => ({
         width: product.dimensions?.width ?? 0,
         length: product.dimensions?.length ?? 0,
@@ -111,73 +66,26 @@ export default function BalanceVisualizerPage() {
 
       // 2. 计算最小面积布局
       const layoutResult = calculateMinArea(rectangles);
-      // // TODO: 紧急且重要
-      // // 根据布局的长宽，计算出模具的边缘间距
-      // const moldEdgeMargin = await calculateEdgeMargin(
-      //   layoutResult.length,
-      //   layoutResult.width,
-      // );
-      // // 根据Product最大高度计��模具底部间距
-      // const maxProductHeight = Math.max(...newProducts.map((p) => p.dimensions?.height ?? 0));
-      // const moldBottomMargin = await calculateBottomMargin(maxProductHeight);
 
+      // 3. 将布局结果转换为 Rectangle 数组，保留originalIndex信息
+      const transformedLayout = layoutResult.layout.map(
+        (rect, index): Rectangle => ({
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          length: rect.length,
+          // 使用数组索引作为originalIndex
+          id: newProducts[index]?.id,
+        }),
+      );
 
-      // // const moldBottomMargin = await calculateBottomMargin(
-      // //   Math.max(...newProducts.map((p) => p.dimensions?.height ?? 0)),
-      // // );
-      // // 生成临时的随机模具材料、密度和单位价格
-      // const randomMold = getRandomMold();
-      // // 此时，有了产品的总体积，模具的总体积以及模具的边缘间距和底部间距，可以计算出模具的重量
-      // const moldWeight = calculateMoldWeight(
-      //   layoutResult.length,
-      //   layoutResult.width,
-      //   moldBottomMargin,
-      //   moldEdgeMargin,
-      // );
-      // // 模具的总价格也能计算出来
-      // const moldPriceResult = await getMoldPrice(
-      //   randomMold?.name ?? 'NAK80',
-      //   moldWeight
-      // );
-      // // 以上信息，都应该通过zustand管理起来
-      // // console.log("moldTotalPrice:",moldPriceResult);
-      // if(moldPriceResult.success) { 
-      //   setMoldDimensions({
-      //     length: layoutResult.length + moldEdgeMargin * 2,
-      //     width: layoutResult.width + moldEdgeMargin * 2,
-      //     height: moldBottomMargin,
-      //   });
-      //   setEdgeMargin(moldEdgeMargin);
-      //   setMoldMaterial(randomMold?.name ?? 'NAK80');
-      //   setMoldWeight(moldWeight);
-      //   setMoldPrice(moldPriceResult.data ?? 0);
-      // } else {
-      //   console.error('Error getting mold price:', moldPriceResult.message);
-      //   setError(moldPriceResult.message ?? '获取模具价格失败');
-      // }
-      // const moldDimensions = {
-      //   length: layoutResult.length + moldEdgeMargin * 2,
-      //   width: layoutResult.width + moldEdgeMargin * 2,
-      //   height: moldBottomMargin,
-      //   moldMaterial: randomMold?.name ?? 'NAK80',
-      //   moldWeight: moldWeight,
-      //   moldPrice: moldPriceResult.data ?? 0,
-      //   maxInnerLength: layoutResult.length,
-      //   maxInnerWidth: layoutResult.width,
-      //   verticalMargin: moldEdgeMargin,
-      //   horizontalMargin: moldEdgeMargin,
-      // };
-
-      // const groupedProducts = calculateProductGroup(newProducts.map((p) => ({
-      //   length: p.dimensions?.length ?? 0,
-      //   width: p.dimensions?.width ?? 0,
-      //   height: p.dimensions?.height ?? 0,
-      //   volume: p.volume ?? 0,
-      //   material: p.materialName ?? '',
-      //   quantity: p.quantity ?? 0,
-      //   color: p.color ?? '',
-      //   density: p.density ?? 0,
-      // })));
+      // 仅在开发环境下输出关键调试信息
+      if (process.env.NODE_ENV === 'development') {
+        console.log("handleGenerateProducts - Layout Result:", {
+          layout: transformedLayout,
+          productCount: newProducts.length,
+        });
+      }
 
       const productGroupSchemas = calculateProductGroupSchemas(newProducts.map((p) => ({
         // 基本尺寸属性
@@ -223,30 +131,6 @@ export default function BalanceVisualizerPage() {
       })), allowDifferentColors, allowDifferentMaterials, moldMaterial);
 
       setProductGroupSchemas(await productGroupSchemas);
-      console.log("productGroupSchemas: ", productGroupSchemas);
-
-      // const productPriceGroupedResult = await getProductPriceByGroup(moldDimensions, groupedProducts);
-      // if(productPriceGroupedResult.success) {
-      //   setProductPriceGroupedResult(productPriceGroupedResult.data ?? []);
-      // } else {
-      //   console.error('Error getting product price by group:', productPriceGroupedResult.message);
-      //   setError(productPriceGroupedResult.message ?? '获取产品价格分组失败');
-      // }
-
-      // console.log("groupedProducts: ", groupedProducts);
-      // console.log("productPriceGroupedResult: ", productPriceGroupedResult);
-
-
-      // 3. 将布局结果转换为 Rectangle 数组
-      const transformedLayout = layoutResult.layout.map(
-        (rect): Rectangle => ({
-          x: rect.x,
-          y: rect.y,
-          width: rect.width,
-          length: rect.length,
-        }),
-      );
-
       setProducts(newProducts);
       setLayout(transformedLayout);
     } catch (error) {
@@ -260,7 +144,7 @@ export default function BalanceVisualizerPage() {
   };
 
   const handleSchemaChange = async (selectedSchema: groupedProductsSchemas[number]) => {
-    console.log("Selected schema in parent:", selectedSchema);
+    // console.log("Selected schema in parent:", selectedSchema);
     // TODO: 在这里添加其他需要的处理逻辑
     // 例如：更新状态、调用API、触发其他计算等
 

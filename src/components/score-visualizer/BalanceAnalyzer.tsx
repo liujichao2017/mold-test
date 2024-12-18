@@ -38,6 +38,8 @@ export const BalanceAnalyzer: React.FC<BalanceAnalyzerProps> = ({
   if (!score) {
     return null;
   }
+  console.log("layout:", layout);
+  console.log("score.details.distribution:", score.details.distribution);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4 p-4">

@@ -2,7 +2,7 @@
 FROM node:20-slim AS deps
 WORKDIR /app
 
-# Install OpenSSL 1.1
+# Install OpenSSL 1.1.1
 RUN apt-get update -y && \
     apt-get install -y openssl1.1 && \
     rm -rf /var/lib/apt/lists/*
@@ -14,7 +14,7 @@ COPY prisma ./prisma/
 # Install dependencies
 RUN npm install
 
-# Generate Prisma Client
+# Generate Prisma Client (in deps stage)
 RUN npx prisma generate
 
 # Stage 2: Builder
@@ -66,11 +66,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# Generate Prisma Client (in runner stage)
+USER root
+RUN npx prisma generate
+USER nextjs
+
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
-
-# Switch to non-root user
-USER nextjs
 
 # Expose port
 EXPOSE 3000

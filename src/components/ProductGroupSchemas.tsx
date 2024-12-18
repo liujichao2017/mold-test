@@ -58,186 +58,186 @@ export function ProductGroupSchemas({
 
   useEffect(() => {
     if (selectedSchema) {
-      console.log("Selected Schema:", selectedSchema);
+      // console.log("Selected Schema:", selectedSchema);
       // Clear group results when schema changes
       setGroupResults({});
       onSchemaChange?.(selectedSchema);
     }
   }, [selectedSchema, onSchemaChange]);
 
-  const handleCalculateGroup = async (groupWithScore: groupedProductsSchemas[number]['groups'][number], groupIndex: number) => {
-    // onCalculateGroup?.(groupWithScore);
-    try {
-      // 1. 将产品转换为 Rectangle2D 数组
-      const rectangles: Rectangle2D[] = groupWithScore.group.map((product) => ({
-        width: product.width ?? 0,
-        length: product.length ?? 0,
-      }));
+  // const handleCalculateGroup = async (groupWithScore: groupedProductsSchemas[number]['groups'][number], groupIndex: number) => {
+  //   // onCalculateGroup?.(groupWithScore);
+  //   try {
+  //     // 1. 将产品转换为 Rectangle2D 数组
+  //     const rectangles: Rectangle2D[] = groupWithScore.group.map((product) => ({
+  //       width: product.width ?? 0,
+  //       length: product.length ?? 0,
+  //     }));
 
-      // console.log("rectangles:", rectangles);
+  //     // console.log("rectangles:", rectangles);
 
-      // 2. 计算最小面积布局
-      const layoutResult = calculateMinArea(rectangles);
+  //     // 2. 计算最小面积布局
+  //     const layoutResult = calculateMinArea(rectangles);
 
-      // console.log("layoutResult:", layoutResult);
-      // TODO: 紧急且重要
-      // 根据布局的长宽，计算模具的边缘间距
-      const moldEdgeMargin = await calculateEdgeMargin(
-        layoutResult.length,
-        layoutResult.width,
-      );
-      // 根据Product最大高度计算模具底部间距
-      const maxProductHeight = Math.max(...groupWithScore.group.map((p) => p.height ?? 0));
-      const moldBottomMargin = await calculateBottomMargin(maxProductHeight);
+  //     // console.log("layoutResult:", layoutResult);
+  //     // TODO: 紧急且重要
+  //     // 根据布局的长宽，计算模具的边缘间距
+  //     const moldEdgeMargin = await calculateEdgeMargin(
+  //       layoutResult.length,
+  //       layoutResult.width,
+  //     );
+  //     // 根据Product最大高度计算模具底部间距
+  //     const maxProductHeight = Math.max(...groupWithScore.group.map((p) => p.height ?? 0));
+  //     const moldBottomMargin = await calculateBottomMargin(maxProductHeight);
 
 
-      // const moldBottomMargin = await calculateBottomMargin(
-      //   Math.max(...newProducts.map((p) => p.dimensions?.height ?? 0)),
-      // );
-      // 生成临时的随机模具材料、密度和单位价格
-      const randomMold = getRandomMold();
-      // 此时，有了产品的总体积，模具的体积以及模具的边缘间距和底部间距，可以计算出模具的重量
-      const moldWeight = calculateMoldWeight(
-        layoutResult.length,
-        layoutResult.width,
-        moldBottomMargin,
-        moldEdgeMargin,
-      );
-      // 模具的总价格也能计算出来
-      const moldPriceResult = await getMoldPrice(
-        randomMold?.name ?? 'NAK80',
-        moldWeight
-      );
-      // 以上信息，都应该通过zustand管理起来
+  //     // const moldBottomMargin = await calculateBottomMargin(
+  //     //   Math.max(...newProducts.map((p) => p.dimensions?.height ?? 0)),
+  //     // );
+  //     // 生成临时的随机模具材料、密度和单位价格
+  //     const randomMold = getRandomMold();
+  //     // 此时，有了产品的总体积，模具的体积以及模具的边缘间距和底部间距，可以计算出模具的重量
+  //     const moldWeight = calculateMoldWeight(
+  //       layoutResult.length,
+  //       layoutResult.width,
+  //       moldBottomMargin,
+  //       moldEdgeMargin,
+  //     );
+  //     // 模具的总价格也能计算出来
+  //     const moldPriceResult = await getMoldPrice(
+  //       randomMold?.name ?? 'NAK80',
+  //       moldWeight
+  //     );
+  //     // 以上信息，都应该通过zustand管理起来
       
-      const convertedProducts = groupWithScore.group.map((product) => ({
-        // 基本尺寸
-        dimensions: {
-          length: product.length ?? 0,
-          width: product.width ?? 0,
-          height: product.height ?? 0,
-        },
+  //     const convertedProducts = groupWithScore.group.map((product) => ({
+  //       // 基本尺寸
+  //       dimensions: {
+  //         length: product.length ?? 0,
+  //         width: product.width ?? 0,
+  //         height: product.height ?? 0,
+  //       },
   
-        // 体积和材料属性
-        volume: product.volume ?? 0,
-        material: product.material ?? '',
-        density: product.density ?? 0,
+  //       // 体积和材料属性
+  //       volume: product.volume ?? 0,
+  //       material: product.material ?? '',
+  //       density: product.density ?? 0,
         
-        // 产品基本信息
-        quantity: product.quantity ?? 0,
-        color: product.color ?? '',
-        id: product.id ?? 0,
-        name: product.name ?? '',
+  //       // 产品基本信息
+  //       quantity: product.quantity ?? 0,
+  //       color: product.color ?? '',
+  //       id: product.id ?? 0,
+  //       name: product.name ?? '',
 
-        // CAD 数据
-        cadData: {
-          boundingBox: {
-            center: product.cadData.boundingBox.center,
-            dimensions: product.cadData.boundingBox.dimensions,
-            rotation: product.cadData.boundingBox.rotation,
-          },
-          volume: product.cadData.volume,
-          surfaceArea: product.cadData.surfaceArea,
-          centerOfMass: product.cadData.centerOfMass,
-          topology: product.cadData.topology,
-          features: product.cadData.features,
-          momentOfInertia: product.cadData.momentOfInertia,
-          format: product.cadData.format,
-          version: product.cadData.version,
-          lastModified: product.cadData.lastModified,
-        },  
-      }));
+  //       // CAD 数据
+  //       cadData: {
+  //         boundingBox: {
+  //           center: product.cadData.boundingBox.center,
+  //           dimensions: product.cadData.boundingBox.dimensions,
+  //           rotation: product.cadData.boundingBox.rotation,
+  //         },
+  //         volume: product.cadData.volume,
+  //         surfaceArea: product.cadData.surfaceArea,
+  //         centerOfMass: product.cadData.centerOfMass,
+  //         topology: product.cadData.topology,
+  //         features: product.cadData.features,
+  //         momentOfInertia: product.cadData.momentOfInertia,
+  //         format: product.cadData.format,
+  //         version: product.cadData.version,
+  //         lastModified: product.cadData.lastModified,
+  //       },  
+  //     }));
 
-      const layout = layoutResult.layout;
-      const injectionPoint = calculateInjectionPoint(layout);
-      console.log("injectionPoint: ", injectionPoint);
-      let groupScore = 0;
-      if(convertedProducts.length > 1) {
-        calculateScores(layout, convertedProducts, injectionPoint);
-        console.log("group scores: ", score);
-        groupScore = Number(score?.total ?? 0);
-        groupWithScore.score = groupScore;
-        // 更新组的分数
-        // if (selectedSchema) {
-        //   const updatedSchema = {
-        //     ...selectedSchema,
-        //     groups: selectedSchema.groups.map((group, idx) => 
-        //       idx === groupIndex 
-        //         ? { ...group, score: groupScore }
-        //         : group
-        //     )
-        //   };
-        //   onSchemaChange?.(updatedSchema);
-        // }
-      }
+  //     const layout = layoutResult.layout;
+  //     const injectionPoint = calculateInjectionPoint(layout);
+  //     console.log("injectionPoint: ", injectionPoint);
+  //     let groupScore = 0;
+  //     if(convertedProducts.length > 1) {
+  //       calculateScores(layout, convertedProducts, injectionPoint);
+  //       console.log("group scores: ", score);
+  //       groupScore = Number(score?.total ?? 0);
+  //       groupWithScore.score = groupScore;
+  //       // 更新组的分数
+  //       // if (selectedSchema) {
+  //       //   const updatedSchema = {
+  //       //     ...selectedSchema,
+  //       //     groups: selectedSchema.groups.map((group, idx) => 
+  //       //       idx === groupIndex 
+  //       //         ? { ...group, score: groupScore }
+  //       //         : group
+  //       //     )
+  //       //   };
+  //       //   onSchemaChange?.(updatedSchema);
+  //       // }
+  //     }
       
 
-      const moldDimensions = {
-        length: layoutResult.length + moldEdgeMargin * 2,
-        width: layoutResult.width + moldEdgeMargin * 2,
-        height: moldBottomMargin,
-        moldMaterial: randomMold?.name ?? 'NAK80',
-        moldWeight: moldWeight,
-        moldPrice: moldPriceResult.data ?? 0,
-        maxInnerLength: layoutResult.length,
-        maxInnerWidth: layoutResult.width,
-        verticalMargin: moldEdgeMargin,
-        horizontalMargin: moldEdgeMargin,
-      };
+  //     const moldDimensions = {
+  //       length: layoutResult.length + moldEdgeMargin * 2,
+  //       width: layoutResult.width + moldEdgeMargin * 2,
+  //       height: moldBottomMargin,
+  //       moldMaterial: randomMold?.name ?? 'NAK80',
+  //       moldWeight: moldWeight,
+  //       moldPrice: moldPriceResult.data ?? 0,
+  //       maxInnerLength: layoutResult.length,
+  //       maxInnerWidth: layoutResult.width,
+  //       verticalMargin: moldEdgeMargin,
+  //       horizontalMargin: moldEdgeMargin,
+  //     };
 
-      const convertedGroup = calculateProductGroup(groupWithScore.group.map((p) => ({
-        length: p?.length ?? 0,
-        width: p?.width ?? 0,
-        height: p?.height ?? 0,
-        volume: p?.volume ?? 0,
-        material: p?.material ?? '',
-        quantity: p?.quantity ?? 0,
-        color: p?.color ?? '',
-        density: p.density ?? 0,
-        name: p?.name ?? '',
-        id: p?.id ?? 0,
-        cadData: p?.cadData ?? {},
-      })));
+  //     const convertedGroup = calculateProductGroup(groupWithScore.group.map((p) => ({
+  //       length: p?.length ?? 0,
+  //       width: p?.width ?? 0,
+  //       height: p?.height ?? 0,
+  //       volume: p?.volume ?? 0,
+  //       material: p?.material ?? '',
+  //       quantity: p?.quantity ?? 0,
+  //       color: p?.color ?? '',
+  //       density: p.density ?? 0,
+  //       name: p?.name ?? '',
+  //       id: p?.id ?? 0,
+  //       cadData: p?.cadData ?? {},
+  //     })));
 
       
-      console.log("convertedGroup:", convertedGroup);
+  //     console.log("convertedGroup:", convertedGroup);
 
-      // 将单个组转换为 groupedProducts 类型
-      // const convertedGroup: groupedProducts = [
-      //   productGroupSchemas.groups.group.map(product => ({
-      //     length: product.length,
-      //     width: product.width,
-      //     height: product.height,
-      //     volume: product.volume,
-      //     material: product.material,
-      //     quantity: product.quantity,
-      //     color: product.color,
-      //     density: product.density
-      //   }))
-      // ];
+  //     // 将单个组转换为 groupedProducts 类型
+  //     // const convertedGroup: groupedProducts = [
+  //     //   productGroupSchemas.groups.group.map(product => ({
+  //     //     length: product.length,
+  //     //     width: product.width,
+  //     //     height: product.height,
+  //     //     volume: product.volume,
+  //     //     material: product.material,
+  //     //     quantity: product.quantity,
+  //     //     color: product.color,
+  //     //     density: product.density
+  //     //   }))
+  //     // ];
 
-      // console.log("Converted group:", convertedGroup);
-      const productPriceGroupedResult = await getProductPriceByGroup(moldDimensions, convertedGroup);
+  //     // console.log("Converted group:", convertedGroup);
+  //     const productPriceGroupedResult = await getProductPriceByGroup(moldDimensions, convertedGroup);
       
-      // console.log("groupResults:", groupResults);
-      if(productPriceGroupedResult.success) {
-        setGroupResults(prevResults => ({
-          ...prevResults,
-          [groupIndex]: {
-            priceGroups: productPriceGroupedResult.data ?? [],
-            moldDimensions: moldDimensions
-          }
-        }));
-        return productPriceGroupedResult.data ?? [];
-      } else {
-        console.error('Error getting product price by group:', productPriceGroupedResult.message);
-        return [];
-      }
-    } catch (error) {
-      console.error('Error calculating group:', error);
-      return [];
-    }
-  };
+  //     // console.log("groupResults:", groupResults);
+  //     if(productPriceGroupedResult.success) {
+  //       setGroupResults(prevResults => ({
+  //         ...prevResults,
+  //         [groupIndex]: {
+  //           priceGroups: productPriceGroupedResult.data ?? [],
+  //           moldDimensions: moldDimensions
+  //         }
+  //       }));
+  //       return productPriceGroupedResult.data ?? [];
+  //     } else {
+  //       console.error('Error getting product price by group:', productPriceGroupedResult.message);
+  //       return [];
+  //     }
+  //   } catch (error) {
+  //     console.error('Error calculating group:', error);
+  //     return [];
+  //   }
+  // };
 
   return (
     <div className="mb-6 rounded-lg border bg-white p-6 shadow-sm">

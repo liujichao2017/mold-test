@@ -52,9 +52,9 @@ function calculateGroupScore(group: productGroup): number {
   }));
 
   // 计算各项指标的标准差
-  const volumeStd = calculateStandardDeviation(products.map(p => p.volume));
-  const weightStd = calculateStandardDeviation(products.map(p => p.weight));
-  const heightStd = calculateStandardDeviation(products.map(p => p.height));
+  // const volumeStd = calculateStandardDeviation(products.map(p => p.volume));
+  // const weightStd = calculateStandardDeviation(products.map(p => p.weight));
+  // const heightStd = calculateStandardDeviation(products.map(p => p.height));
 
   // 计算各项指标的变异系数 (CV = 标准差/平均值)
   const volumeCV = calculateCV(products.map(p => p.volume));

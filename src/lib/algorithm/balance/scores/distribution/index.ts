@@ -42,7 +42,6 @@ export function calculateDistributionScore(
 ): DetailedDistributionScore {
   // Handle empty case
   if (products.length === 0) {
-    console.log("Empty case detected, returning perfect score");
     return {
       score: 100,
       details: {
@@ -53,7 +52,7 @@ export function calculateDistributionScore(
         ],
         gyrationRadius: 0,
         isotropy: 100,
-        centerDeviation: 0,
+        centerDeviation: 100,
         volumeBalance: {
           densityVariance: 100,
           heightBalance: 100,
@@ -64,17 +63,31 @@ export function calculateDistributionScore(
     };
   }
 
+  // 仅在开发环境下输出关键调试信息
+  if (process.env.NODE_ENV === 'development') {
+    console.log("calculateDistributionScore - Input:", {
+      layoutKeys: Object.keys(layout),
+      productCount: products.length,
+    });
+  }
+
   // Initialize calculators
-  const physicsCalc = new PhysicsCalculator();
-  const spatialCalc = new SpatialCalculator();
-  const volumeCalc = new VolumeCalculator();
+  const physicsCalculator = new PhysicsCalculator();
+  const volumeCalculator = new VolumeCalculator();
+  const spatialCalculator = new SpatialCalculator();
 
   try {
-    const physicalAnalysis = physicsCalc.calculate(layout, products);
-    const physicalDetails = physicsCalc.toScoreDetails(physicalAnalysis);
+    // Calculate physics scores
+    const physicsResult = physicsCalculator.calculate(layout, products);
 
-    const spatialAnalysis = spatialCalc.calculate(layout, products);
-    const volumeDetails = volumeCalc.calculate(layout, products);
+    // Calculate volume balance scores
+    const volumeResult = volumeCalculator.calculate(layout, products);
+
+    // Calculate spatial scores
+    const spatialResult = spatialCalculator.calculate(layout, products);
+
+    const physicalDetails = physicsCalculator.toScoreDetails(physicsResult);
+    const volumeDetails = volumeResult;
 
     const layoutPatterns = detectLayoutPatterns(layout, products);
     const patternBonus = calculatePatternBonus(
@@ -96,18 +109,18 @@ export function calculateDistributionScore(
 
     const baseScore =
       physicalScore * weights.physical +
-      spatialAnalysis.uniformity * weights.spatial +
+      spatialResult.uniformity * weights.spatial +
       volumeScore * weights.volume;
 
     // Apply bonuses
     const minScore = Math.min(
       physicalScore,
-      spatialAnalysis.uniformity,
+      spatialResult.uniformity,
       volumeScore,
     );
     const maxScore = Math.max(
       physicalScore,
-      spatialAnalysis.uniformity,
+      spatialResult.uniformity,
       volumeScore,
     );
     const balanceBonus = minScore > 70 && maxScore - minScore < 20 ? 5 : 0;

@@ -27,6 +27,7 @@ export interface Rectangle2D {
 export interface Rectangle extends Rectangle2D {
   x: number;      // x坐标
   y: number;      // y坐标
+  id?: number;    // 可选的ID，用于关联产品
 }
 
 /**

@@ -50,7 +50,7 @@ interface ProductInputFormProps {
   onSubmit: (products: Product[], moldMaterial: string) => Promise<void>;
 }
 
-function formatNumber(value: number, decimals: number = 0): string {
+function formatNumber(value: number, decimals = 0): string {
   return new Intl.NumberFormat('zh-CN', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -87,7 +87,29 @@ export function ProductInputForm({ onSubmit }: ProductInputFormProps) {
     }));
   }
 
-  // 生成合理的体积和表面积
+  function handleFillDefaultValues(index: number) {
+    setProducts(products.map((product, i) => {
+      if (i !== index) return product;
+      
+      const length = 100;
+      const width = 100;
+      const height = 30;
+      
+      return {
+        ...product,
+        color: '405C',
+        material: 'TPU',
+        productionQuantity: 1000,
+        cavityCount: 1,
+        length,
+        width,
+        height,
+        volume: length * width * height,
+      };
+    }));
+  }
+
+// 生成合理的体积和表面积
 function generateVolumeAndSurface(
   length: number,
   width: number,
@@ -198,7 +220,7 @@ function generateBoundingBoxAndCenterOfMass(
         return convertedProduct;
       });
 
-      console.log("convertedProducts:", convertedProducts);
+      // console.log("convertedProducts:", convertedProducts);
       // 验证产品数量
       if (convertedProducts.length < 2) {
         // 可以添加一个提示或错误处理
@@ -372,13 +394,22 @@ function generateBoundingBoxAndCenterOfMass(
               )}
             </div>
 
-            <Button 
-              variant="destructive" 
-              onClick={() => handleRemoveProduct(index)}
-              className="col-span-4 mt-2"
-            >
-              删除产品
-            </Button>
+            <div className="flex gap-2 col-span-4 mt-2">
+              <Button 
+                variant="destructive" 
+                onClick={() => handleRemoveProduct(index)}
+                className="flex-1"
+              >
+                删除产品
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleFillDefaultValues(index)}
+                className="flex-1"
+              >
+                填入默认值
+              </Button>
+            </div>
           </div>
         ))}
       </div>

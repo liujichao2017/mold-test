@@ -10,6 +10,17 @@ import {
   type LegendConfig,
   useViewBoxCalculation,
 } from "./base/BaseScoreVisualizer";
+import type { Rectangle } from "@/types/core/geometry";
+import type { DetailedDistributionScore } from "@/types/algorithm/balance/distribution";
+
+interface DistributionScores {
+  total: number;
+  aspectRatio: number;
+  area: number;
+  linearPenalty: number;
+  centers: Array<{ x: number; y: number }>;
+  weights: number[];
+}
 
 export const DistributionScoreVisualizer: React.FC<BaseVisualizerProps> = ({
   layout,
@@ -22,47 +33,40 @@ export const DistributionScoreVisualizer: React.FC<BaseVisualizerProps> = ({
   const { scale, viewBox, layoutBounds } = viewBoxData;
 
   // Calculate distribution scores
-  const scores = useMemo(() => {
+  const scores = useMemo<DistributionScores | null>(() => {
     if (!layout.length || !products.length) return null;
 
-    const centers = layout.map((rect) => calculate2DCenter(rect));
-    const weights = products.map((p) => p.weight ?? 1);
+    // Convert layout array to Record format
+    const layoutRecord: Record<number, Rectangle> = {};
+    layout.forEach((rect) => {
+      if (rect.id !== undefined) {
+        // 只保留位置和尺寸信息
+        layoutRecord[rect.id] = {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          length: rect.length,
+        };
+      }
+    });
 
-    // Calculate aspect ratios
-    const aspectRatios = layout.map((rect) => rect.width / rect.length);
-    const avgAspectRatio =
-      aspectRatios.reduce((a, b) => a + b, 0) / aspectRatios.length;
-    const aspectRatioVariance =
-      aspectRatios.reduce(
-        (sum, ratio) => sum + Math.pow(ratio - avgAspectRatio, 2),
-        0,
-      ) / aspectRatios.length;
-    const aspectRatioScore = 100 - Math.min(100, aspectRatioVariance * 350);
+    // 仅在开发环境下输出关键调试信息
+    if (process.env.NODE_ENV === 'development') {
+      console.log("DistributionScoreVisualizer - Score Input:", {
+        layoutRecord,
+        productCount: products.length,
+      });
+    }
 
-    // Calculate areas
-    const areas = layout.map((rect) => rect.width * rect.length);
-    const avgArea = areas.reduce((a, b) => a + b, 0) / areas.length;
-    const areaVariance =
-      areas.reduce((sum, area) => sum + Math.pow(area - avgArea, 2), 0) /
-      (avgArea * avgArea * areas.length);
-    const areaScore = 100 - Math.min(100, areaVariance * 350);
-
-    // Calculate linear penalty
-    const xCoords = centers.map((p) => p.x);
-    const yCoords = centers.map((p) => p.y);
-    const xRange = Math.max(...xCoords) - Math.min(...xCoords);
-    const yRange = Math.max(...yCoords) - Math.min(...yCoords);
-    const maxRange = Math.max(xRange, yRange);
-    const linearPenalty =
-      maxRange === 0 ? 0 : (Math.abs(xRange - yRange) / maxRange) * 150;
+    const result: DetailedDistributionScore = calculateDistributionScore(layoutRecord, products);
 
     return {
-      total: calculateDistributionScore(layout, products),
-      aspectRatio: aspectRatioScore,
-      area: areaScore,
-      linearPenalty,
-      centers,
-      weights,
+      total: result.overall,
+      aspectRatio: 0,
+      area: 0,
+      linearPenalty: 0,
+      centers: layout.map(rect => calculate2DCenter(rect)),
+      weights: products.map(p => p.weight ?? 1),
     };
   }, [layout, products]);
 
@@ -107,7 +111,12 @@ export const DistributionScoreVisualizer: React.FC<BaseVisualizerProps> = ({
         <div className="border-b pb-2">
           <div className="font-medium">分布总分</div>
           <div className="text-2xl font-semibold text-slate-800">
-            {scores.total.overall.toFixed(1)}
+            {scores.total.toFixed(1)}
+          </div>
+          <div className="mt-1 grid grid-cols-3 gap-2 text-xs text-gray-500">
+            <div>物理分布 (30%)</div>
+            <div>空间分布 (30%)</div>
+            <div>体积平衡 (40%)</div>
           </div>
         </div>
 
@@ -117,23 +126,19 @@ export const DistributionScoreVisualizer: React.FC<BaseVisualizerProps> = ({
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
               <div className="text-gray-600">各向同性比</div>
-              <div>{scores.total.details.isotropy.toFixed(1)}</div>
+              <div>0</div>
             </div>
             <div>
               <div className="text-gray-600">质心偏移</div>
-              <div>{scores.total.details.centerDeviation.toFixed(1)}</div>
+              <div>0</div>
             </div>
             <div>
               <div className="text-gray-600">陀螺半径</div>
-              <div>{scores.total.details.gyrationRadius.toFixed(1)}</div>
+              <div>0</div>
             </div>
             <div>
               <div className="text-gray-600">主惯性矩</div>
-              <div>
-                {scores.total.details.principalMoments
-                  .map((m) => m.toFixed(1))
-                  .join(", ")}
-              </div>
+              <div>0</div>
             </div>
           </div>
         </div>
@@ -144,34 +149,36 @@ export const DistributionScoreVisualizer: React.FC<BaseVisualizerProps> = ({
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
               <div className="text-gray-600">密度方差</div>
-              <div>
-                {scores.total.details.volumeBalance.densityVariance.toFixed(1)}
-              </div>
+              <div>0</div>
             </div>
             <div>
-              <div className="text-gray-600">高度分布</div>
-              <div>
-                {scores.total.details.volumeBalance.heightBalance.toFixed(1)}
-              </div>
+              <div className="text-gray-600">高度平衡</div>
+              <div>0</div>
             </div>
             <div>
               <div className="text-gray-600">质量分布</div>
-              <div>
-                {scores.total.details.volumeBalance.massDistribution.toFixed(1)}
-              </div>
+              <div>0</div>
             </div>
             <div>
               <div className="text-gray-600">对称性</div>
-              <div>
-                {scores.total.details.volumeBalance.symmetry.toFixed(1)}
-              </div>
+              <div>0</div>
             </div>
           </div>
         </div>
 
-        {/* 说明 */}
-        <div className="mt-2 text-xs text-gray-500">
-          颜色深浅表示分布评分的高低
+        {/* 布局模式 */}
+        <div className="space-y-2">
+          <div className="font-medium">布局模式</div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <div className="text-gray-600">布局奖励</div>
+              <div>0</div>
+            </div>
+            <div>
+              <div className="text-gray-600">平衡奖励</div>
+              <div>0</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -204,7 +211,7 @@ export const DistributionScoreVisualizer: React.FC<BaseVisualizerProps> = ({
                 y={rect.y}
                 width={rect.width}
                 height={rect.length}
-                fill={getScoreColor(scores.total.overall)}
+                fill={getScoreColor(scores.total)}
                 fillOpacity={opacity}
                 stroke={COLORS.neutral.border}
                 strokeWidth={1 / scale}

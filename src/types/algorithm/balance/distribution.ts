@@ -78,8 +78,12 @@ export interface InternalPhysicalAnalysis {
   };
 }
 
+/**
+ * 分布平衡得分详情
+ */
 export interface DetailedDistributionScore {
-  overall: number; // 总体分布分数 (0-100)
+  overall: number; // 总分
+
   details: {
     // 物理特性
     principalMoments: [number, number]; // 主惯性矩（特征值）
@@ -95,5 +99,13 @@ export interface DetailedDistributionScore {
       massDistribution: number; // 考虑体积带来的质量分布
       symmetry: number; // 对称性分数
     };
+
+    // 布局模式（可选）
+    layoutPatterns?: {
+      type: string; // 布局模式类型
+      confidence: number; // 置信度
+    }[];
+    patternBonus?: number; // 布局模式奖励分数
+    balanceBonus?: number; // 平衡奖励分数
   };
 }

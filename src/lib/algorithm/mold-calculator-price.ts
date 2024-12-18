@@ -86,6 +86,7 @@ class ProductPriceCalculator {
 
       return {
         ...product,
+        remainingQuantity: product.productQuantity,
         processingCost: [{
           productMakingQuantity: product.productQuantity ?? 0,
           productMakingPrice: productMachiningCost,
@@ -244,4 +245,3 @@ export async function createProductPriceCalculator(
     machinePriceSettingList
   );
 }
-

@@ -182,16 +182,23 @@ export class PhysicsCalculator {
     elements: MassElement[],
     centerOfMass: Point2D,
   ): InertiaResult {
-    let Ixx = 0,
-      Iyy = 0,
-      Ixy = 0;
-    const totalMass = elements.reduce((sum, e) => sum + e.mass, 0);
+    let Ixx = 0;
+    let Iyy = 0;
+    let Ixy = 0;
+    let totalMass = 0;
 
-    // 检测布局特征
+    // 计算总质量和特征长度
+    elements.forEach((element) => {
+      totalMass += element.mass;
+    });
+
+    // 获取布局尺寸
+    const bounds = this.getLayoutBounds(elements);
+    const characteristicLength = Math.sqrt(bounds.width * bounds.width + bounds.length * bounds.length);
+
+    // 检查布局特征
     const isVertical = this.isVerticallyDominant(elements);
     const isHorizontal = this.isHorizontallyDominant(elements);
-
-    // 计算质量分布的连续性
     const massDistribution = this.calculateMassDistribution(elements);
     const continuityFactor = massDistribution.continuity;
 
@@ -205,18 +212,26 @@ export class PhysicsCalculator {
         correctionFactor = 0.8 + continuityFactor * 0.2;
       }
 
+      // 计算惯性矩，不使用归一化因子
       const elementIxx =
         element.mass *
         (dy * dy * correctionFactor + (element.length * element.length) / 12);
       const elementIyy =
         element.mass *
         (dx * dx * correctionFactor + (element.width * element.width) / 12);
-      const elementIxy = element.mass * dx * dy * correctionFactor;
+      const elementIxy =
+        element.mass * dx * dy * correctionFactor;
 
       Ixx += elementIxx;
       Iyy += elementIyy;
       Ixy += elementIxy;
     });
+
+    // 归一化惯性矩
+    const normalizationFactor = 1 / (totalMass * characteristicLength * characteristicLength);
+    Ixx *= normalizationFactor;
+    Iyy *= normalizationFactor;
+    Ixy *= normalizationFactor;
 
     const avg = (Ixx + Iyy) / 2;
     const diff = Math.sqrt(((Ixx - Iyy) * (Ixx - Iyy)) / 4 + Ixy * Ixy);
@@ -230,7 +245,7 @@ export class PhysicsCalculator {
       [sin, cos],
     ];
 
-    const gyrationRadius = Math.sqrt((moments[0] + moments[1]) / totalMass);
+    const gyrationRadius = Math.sqrt((moments[0] + moments[1]) / totalMass) * characteristicLength;
 
     return { moments, axes, gyrationRadius };
   }
@@ -247,47 +262,45 @@ export class PhysicsCalculator {
     },
   ): number {
     const [m1, m2] = inertia.moments;
-    if (m1 === 0 || m2 === 0) return 0;
+    
+    // 处理零值和极小值
+    const epsilon = 1e-10;
+    if (Math.abs(m1) < epsilon && Math.abs(m2) < epsilon) return 100;
+    if (Math.abs(m1) < epsilon || Math.abs(m2) < epsilon) return 20;
 
-    // 计算基础比率
-    let ratio = Math.min(m1 / m2, m2 / m1);
+    // 归一化处理，避免大数值
+    const maxMoment = Math.max(Math.abs(m1), Math.abs(m2));
+    const normalizedM1 = m1 / maxMoment;
+    const normalizedM2 = m2 / maxMoment;
+
+    // 计算比率（归一化后的值应该在0到1之间）
+    const ratio = Math.min(normalizedM1 / normalizedM2, normalizedM2 / normalizedM1);
+
+    // 使用更宽容的评分曲线
+    const baseScore = Math.pow(ratio, 0.3) * 100; // 降低指数使得评分更宽容
 
     // 计算分布因子
     const distributionFactor = this.calculateDistributionFactor(inertia);
 
-    // 使用更合理的评分曲线
-    if (ratio >= 0.1) {
-      // 对于比率在 0.1-0.3 范围内的布局，给予更合理的分数
-      const baseExponent = 0.6;
-      const adjustedExponent = baseExponent * (1 + distributionFactor * 0.4);
-      ratio = Math.pow(ratio, adjustedExponent);
-
-      // 提供最低保障分数
-      if (distributionFactor > 0.7) {
-        ratio = Math.max(ratio, 0.7);
-      } else if (distributionFactor > 0.5) {
-        ratio = Math.max(ratio, 0.6);
-      } else {
-        ratio = Math.max(ratio, 0.5);
-      }
+    // 根据分布因子调整基础分数
+    let adjustedScore = baseScore;
+    if (distributionFactor > 0.8) {
+      adjustedScore = Math.max(adjustedScore, 90);
+    } else if (distributionFactor > 0.6) {
+      adjustedScore = Math.max(adjustedScore, 80);
     }
-
-    let score = ratio * 100;
 
     // 应用模式特定的调整
-    if (patterns.isGradient) {
-      const bonus = patterns.gradientQuality * 0.3;
-      score = Math.max(70, score * (1 + bonus));
-    } else if (patterns.isHierarchical) {
-      const bonus = patterns.hierarchyQuality * 0.3;
-      score = Math.max(70, score * (1 + bonus));
+    if (patterns.isGradient || patterns.isHierarchical) {
+      const qualityBonus = Math.max(patterns.gradientQuality, patterns.hierarchyQuality) * 0.2;
+      adjustedScore = Math.max(adjustedScore, 80 + qualityBonus * 20);
     }
 
-    // 应用分布因子的最终调整
-    const finalBonus = Math.max(0, distributionFactor - 0.5) * 0.4;
-    score *= 1 + finalBonus;
+    // 应用最终的分布因子加成
+    const finalBonus = Math.max(0, distributionFactor - 0.5) * 0.2;
+    adjustedScore *= (1 + finalBonus);
 
-    return Math.min(100, score);
+    return Math.min(100, adjustedScore);
   }
 
   private calculateDistributionFactor(inertia: InertiaResult): number {
@@ -305,15 +318,58 @@ export class PhysicsCalculator {
     // 计算旋转对称性：通过主轴的正交性评估
     const orthogonalityFactor = Math.abs(
       inertia.axes[0][0] * inertia.axes[1][0] +
-        inertia.axes[0][1] * inertia.axes[1][1],
+      inertia.axes[0][1] * inertia.axes[1][1]
     );
     const symmetryFactor = 1 - orthogonalityFactor;
 
     // 综合各个因子，给予不同权重
-    const weightedFactor =
-      angleFactor * 0.4 + momentFactor * 0.4 + symmetryFactor * 0.2;
+    return angleFactor * 0.4 + momentFactor * 0.4 + symmetryFactor * 0.2;
+  }
 
-    return weightedFactor;
+  private getLayoutBounds(
+    input: MassElement[] | Record<number, Rectangle>
+  ): { width: number; length: number } {
+    if (Array.isArray(input)) {
+      // 处理 MassElement[] 类型
+      if (input.length === 0) {
+        return { width: 0, length: 0 };
+      }
+
+      const xs = input.map(e => e.x);
+      const ys = input.map(e => e.y);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+
+      return {
+        width: maxX - minX,
+        length: maxY - minY
+      };
+    } else {
+      // 处理 Record<number, Rectangle> 类型
+      const rectangles = Object.values(input);
+      if (rectangles.length === 0) {
+        return { width: 0, length: 0 };
+      }
+
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+
+      rectangles.forEach((rect) => {
+        minX = Math.min(minX, rect.x);
+        minY = Math.min(minY, rect.y);
+        maxX = Math.max(maxX, rect.x + rect.width);
+        maxY = Math.max(maxY, rect.y + rect.length);
+      });
+
+      return {
+        width: maxX - minX,
+        length: maxY - minY
+      };
+    }
   }
 
   private calculateCenterDeviationScore(
@@ -328,22 +384,30 @@ export class PhysicsCalculator {
       alignmentQuality: number;
     },
   ): number {
-    const bounds = this.getLayoutBounds(layout);
-    if (!bounds) return 0;
+    // 获取布局边界
+    const rectangles = Object.values(layout);
+    if (rectangles.length === 0) return 100;
 
-    const maxDimension = Math.max(
-      bounds.maxX - bounds.minX,
-      bounds.maxY - bounds.minY,
-    );
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
 
+    rectangles.forEach((rect) => {
+      minX = Math.min(minX, rect.x);
+      minY = Math.min(minY, rect.y);
+      maxX = Math.max(maxX, rect.x + rect.width);
+      maxY = Math.max(maxY, rect.y + rect.length);
+    });
+
+    const maxDimension = Math.max(maxX - minX, maxY - minY);
     if (maxDimension === 0) return 100;
 
     // Calculate layout center
-    const layoutCenterX = (bounds.maxX + bounds.minX) / 2;
-    const layoutCenterY = (bounds.maxY + bounds.minY) / 2;
+    const layoutCenterX = (maxX + minX) / 2;
+    const layoutCenterY = (maxY + minY) / 2;
 
     // Calculate weighted center deviation with pattern-specific adjustments
-    const rectangles = Object.values(layout);
     let totalWeight = 0;
     let weightedDeviation = 0;
 
@@ -414,25 +478,6 @@ export class PhysicsCalculator {
     }
 
     return Math.max(0, Math.min(100, score));
-  }
-
-  private getLayoutBounds(layout: Record<number, Rectangle>) {
-    const rectangles = Object.values(layout);
-    if (rectangles.length === 0) return null;
-
-    let minX = Infinity,
-      minY = Infinity;
-    let maxX = -Infinity,
-      maxY = -Infinity;
-
-    rectangles.forEach((rect) => {
-      minX = Math.min(minX, rect.x);
-      minY = Math.min(minY, rect.y);
-      maxX = Math.max(maxX, rect.x + rect.width);
-      maxY = Math.max(maxY, rect.y + rect.length);
-    });
-
-    return { minX, minY, maxX, maxY };
   }
 
   private detectGradientPattern(
